@@ -1,97 +1,110 @@
-import {useEffect} from "preact/hooks";
+import { useEffect, useRef, useState } from 'react';
+import { fabric } from 'fabric';
 
-class WordTransform {
-    // where the user drags it to, relative to x,y
-    public translateX = 0;
-    public translateY = 0;
+export const App = () => {
+  const canvasRef = useRef(null);
+  const [text, setText] = useState<string>('abc');
+  const [fontSize, setFontSize] = useState<number>(100);
 
-    public rotation = 0;
-    public scale = 1;
+  useEffect(() => {
+    const canvas = new fabric.Canvas(canvasRef.current);
 
-    // where it is drawn on the canvas
-    public x = 0;
-    public y = 0;
+    fabric.Image.fromURL('/metal.jpg', (img) => {
+      img.scaleToWidth(800);
+      img.scaleToHeight(600);
 
-    constructor(public text: string, public metric: TextMetrics) {}
+      canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+    });
 
-    get width() {
-        return Math.abs(this.metric.actualBoundingBoxLeft) + Math.abs(this.metric.actualBoundingBoxRight);
-    }
+    const gradient = new fabric.Gradient({
+      type: 'linear',
+      coords: {
+        x1: 0,
+        y1: 0,
+        x2: 0,
+        y2: 100
+      },
+      colorStops: [
+        { offset: 0, color: '#000' },
+        { offset: 1, color: 'rgba(255,255,255,0.2)' }
+      ]
+    });
 
-    get height() {
-        return Math.abs(this.metric.actualBoundingBoxAscent) + Math.abs(this.metric.actualBoundingBoxDescent);
-    }
+    const engravedText = new fabric.Text(text, {
+      fontFamily: 'Georgia',
+      fontSize: fontSize,
+      fontWeight: 800,
+      fill: 'rgba(0, 0, 0, .1)',
+      stroke: gradient,
+      strokeWidth: 3,
+      left: 50,
+      top: 100,
+    });
 
-    get x1() {
-        return this.x;
-    }
+    const shadowText = new fabric.Text(text, {
+      fontFamily: 'Georgia',
+      fontSize: fontSize,
+      fontWeight: 800,
+      fill: '',
+      stroke: 'rgba(0,0,0,.4)',
+      strokeWidth: 8,
+      left: 50,
+      top: 100,
+      clipPath: engravedText
+    });
 
-    get y1() {
-        return this.y;
-    }
+    const group = new fabric.Group([engravedText, shadowText], {
+      shadow: {
+        color: 'rgba(0, 0, 0, 0.5)',
+        blur: 15,
+        offsetX: 5,
+        offsetY: 5
+      },
+    });
 
-    get x2() {
-        return this.x + this.width;
-    }
+    canvas.add(group);
+    canvas.renderAll();
 
-    get y2() {
-        return this.y + this.height;
-    }
+    return () => {
+      canvas.dispose();
+    };
+  }, [text, fontSize]);
 
-    get centerX() {
-        return this.x1 + this.width / 2;
-    }
+  return (
+    <>
+      <canvas
+        ref={canvasRef}
+        width={800}
+        height={600}
+        style={{ border: '1px solid #ccc' }}
+      />
+      <div className="my-5 w-64 flex justify-between items-center">
+        <label>Text: </label>
+        <input
+          className="border-2 border-solid border-[#000] rounded-md w-32 px-2 py-1"
+          type="text"
+          value={text}
+          onChange={(e) => {
+            const value = (e.target as HTMLInputElement).value;
+            if (e.target) setText(value);
+          }}
+        />
+      </div>
+      <div className="w-64 flex justify-between items-center">
+        <label>Font Size: </label>
+        <input
+          className="border-2 border-solid border-[#000] rounded-md w-32 px-2 py-1"
+          type="number"
+          value={fontSize}
+          min={100}
+          max={300}
+          onChange={(e) => {
+            const value = (e.target as HTMLInputElement).value;
+            if (e.target) setFontSize(Number(value));
+          }}
+        />
+      </div>
+    </>
+  );
+};
 
-    get centerY() {
-        return this.y1 + this.height / 2;
-    }
-}
-
-function draw() {
-    const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-    const ctx = canvas.getContext('2d')!;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // all drawing must be done on the layer canvas
-    // and then draw the layer canvas on the main canvas
-    const layerCanvas = document.createElement('canvas') as HTMLCanvasElement;
-    const layerCtx = layerCanvas.getContext('2d')!;
-    layerCanvas.width = canvas.width;
-    layerCanvas.height = canvas.height;
-    layerCtx.font = '56px sans-serif';
-
-    // words must be drawn individually
-    const words = ['Hello', 'World'].map(word => new WordTransform(word, layerCtx.measureText(word)));
-
-    words[0].x = 300;
-    words[0].y = 300;
-
-    words[1].x = words[0].x2 + 20;
-    words[1].y = words[0].y;
-
-    for (const transform of words) {
-        ctx.save();
-        layerCtx.save();
-        layerCtx.clearRect(0, 0, layerCanvas.width, layerCanvas.height);
-
-        // todo: apply effects here
-        layerCtx.fillText(transform.text, transform.x, transform.y);
-
-        ctx.drawImage(layerCanvas, 0, 0);
-        ctx.restore();
-        layerCtx.restore();
-    }
-}
-
-export function App() {
-    useEffect(() => {
-        draw();
-    }, []);
-
-    return (
-        <div>
-            <canvas width={1000} height={1000} className={'border border-red-400'}></canvas>
-        </div>
-    )
-}

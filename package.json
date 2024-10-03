@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "autoprefixer": "^10.4.19",
+    "fabric": "^5.4.0",
     "postcss": "^8.4.39",
     "preact": "^10.22.1",
     "tailwindcss": "^3.4.6",
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.8.3",
+    "@types/fabric": "^5.3.9",
     "typescript": "^5.2.2",
     "vite": "^5.3.4"
   }
